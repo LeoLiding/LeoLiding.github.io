@@ -951,6 +951,48 @@
     <script>
         // 修改留言功能的实现
         let messages = JSON.parse(localStorage.getItem('messages') || '[]');
+        let map = null; // 存储地图实例
+
+        // 初始化地图
+        function initMap() {
+            map = L.map('message-map').setView([35.8617, 104.1954], 4); // 中国中心位置
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // 为现有留言添加标记
+            messages.forEach(msg => {
+                addMessageToMap(msg);
+            });
+        }
+
+        // 添加留言到地图
+        function addMessageToMap(message) {
+            // 解析位置信息
+            const locationParts = message.location.split(' ');
+            if (locationParts.length >= 2) {
+                const country = locationParts[0];
+                const city = locationParts[1];
+                
+                // 使用地理编码服务获取坐标
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(message.location)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            const { lat, lon } = data[0];
+                            const marker = L.marker([lat, lon]).addTo(map);
+                            marker.bindPopup(`
+                                <div>
+                                    <strong>${message.author}</strong>
+                                    <p>${message.content}</p>
+                                    <small>${message.time}</small>
+                                </div>
+                            `);
+                        }
+                    })
+                    .catch(error => console.error('获取位置信息失败:', error));
+            }
+        }
 
         // 提交留言
         async function submitMessage(e) {
@@ -971,6 +1013,9 @@
 
                 messages.unshift(newMessage);
                 localStorage.setItem('messages', JSON.stringify(messages));
+                
+                // 添加新留言到地图
+                addMessageToMap(newMessage);
                 
                 // 更新留言列表
                 displayMessages();
@@ -1007,8 +1052,13 @@
             `).join('');
         }
 
-        // 初始化显示留言
-        displayMessages();
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化地图
+            initMap();
+            // 显示留言
+            displayMessages();
+        });
     </script>
 </body>
 </html> 
