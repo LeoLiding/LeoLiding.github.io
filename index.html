@@ -949,48 +949,8 @@
         }
     </script>
     <script>
-        // 存储留言的数组
-        let messages = [];
-        let currentIP = ''; // 存储当前用户的IP
-        let map = null; // 存储地图实例
-        let markers = {}; // 存储地图标记
-        let locationCounts = {}; // 存储位置计数
-
-        // 从 URL 参数中获取留言数据
-        function getMessagesFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const encodedMessages = urlParams.get('messages');
-            if (encodedMessages) {
-                try {
-                    return JSON.parse(decodeURIComponent(encodedMessages));
-                } catch (e) {
-                    console.error('解析留言数据失败:', e);
-                    return [];
-                }
-            }
-            return [];
-        }
-
-        // 将留言数据保存到 URL
-        function saveMessagesToUrl() {
-            const encodedMessages = encodeURIComponent(JSON.stringify(messages));
-            const newUrl = `${window.location.pathname}?messages=${encodedMessages}`;
-            window.history.replaceState({}, '', newUrl);
-        }
-
-        // 初始化留言数据
-        function initMessages() {
-            messages = getMessagesFromUrl();
-            if (messages.length === 0) {
-                // 如果没有 URL 参数，尝试从 localStorage 获取
-                const storedMessages = localStorage.getItem('messages');
-                if (storedMessages) {
-                    messages = JSON.parse(storedMessages);
-                    // 将 localStorage 的数据同步到 URL
-                    saveMessagesToUrl();
-                }
-            }
-        }
+        // 修改留言功能的实现
+        let messages = JSON.parse(localStorage.getItem('messages') || '[]');
 
         // 提交留言
         async function submitMessage(e) {
@@ -1002,29 +962,21 @@
             submitButton.textContent = '发布中...';
 
             try {
-                const ip = await getIP();
-                if (!ip) {
-                    throw new Error('无法获取IP地址');
-                }
-                
                 const newMessage = {
                     author: form.author.value,
                     content: form.content.value,
                     time: new Date().toLocaleString('zh-CN'),
-                    ip: ip,
                     location: form.location.value
                 };
 
                 messages.unshift(newMessage);
-                
-                // 保存到 URL 和 localStorage
-                saveMessagesToUrl();
                 localStorage.setItem('messages', JSON.stringify(messages));
                 
-                // 添加新留言到地图
-                await addMessageToMap(newMessage);
+                // 更新留言列表
                 displayMessages();
                 form.reset();
+                
+                alert('留言发布成功！');
             } catch (error) {
                 console.error('提交留言失败:', error);
                 alert('发布失败，请稍后重试');
@@ -1036,49 +988,27 @@
             return false;
         }
 
-        // 删除留言
-        async function deleteMessage(time) {
-            if (confirm('确定要删除这条留言吗？')) {
-                const messageToDelete = messages.find(msg => msg.time === time);
-                if (messageToDelete) {
-                    const location = messageToDelete.location;
-                    locationCounts[location] = (locationCounts[location] || 1) - 1;
-                    
-                    if (locationCounts[location] === 0) {
-                        // 如果该位置没有留言了，移除标记
-                        if (markers[location]) {
-                            map.removeLayer(markers[location]);
-                            delete markers[location];
-                        }
-                    } else {
-                        // 更新标记样式
-                        await addMessageToMap(messageToDelete);
-                    }
-                }
-                
-                messages = messages.filter(msg => msg.time !== time);
-                
-                // 更新 URL 和 localStorage
-                saveMessagesToUrl();
-                localStorage.setItem('messages', JSON.stringify(messages));
-                displayMessages();
-            }
+        // 显示留言
+        function displayMessages() {
+            const messageList = document.getElementById('message-list');
+            messageList.innerHTML = messages.map(msg => `
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h5 class="font-medium">${msg.author}</h5>
+                            <p class="text-gray-600 mt-1">${msg.content}</p>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <p>${msg.time}</p>
+                            <p>${msg.location}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                currentIP = await getIP();
-                if (!currentIP) {
-                    console.error('无法获取当前用户IP');
-                }
-                initMessages();
-                initMap();
-                displayMessages();
-            } catch (error) {
-                console.error('初始化失败:', error);
-            }
-        });
+        // 初始化显示留言
+        displayMessages();
     </script>
 </body>
 </html> 
