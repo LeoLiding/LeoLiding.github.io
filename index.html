@@ -6,6 +6,13 @@
     <title>李丁一祺 - 个人简介</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- Heroicons -->
@@ -16,6 +23,8 @@
     <!-- 自定义样式 -->
     <link href="css/custom.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- 移除 EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         body {
             font-family: 'Noto Sans SC', sans-serif;
@@ -31,9 +40,232 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
+        
+        /* 打字机效果 */
+        .typewriter {
+            overflow: hidden;
+            border-right: 2px solid #4ECDC4;
+            white-space: nowrap;
+            margin: 0 auto;
+            animation: 
+                typing 5s steps(40, end),
+                blink-caret .75s step-end infinite;
+        }
+
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #4ECDC4 }
+        }
+
+        /* 渐入效果 */
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 1s ease-in forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 呼吸效果 */
+        .breathing {
+            display: inline-block;
+            animation: breathing 4s ease-in-out infinite;
+        }
+
+        @keyframes breathing {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        /* 主标题呼吸效果 */
+        .breathing-large {
+            animation: breathingLarge 4s ease-in-out infinite;
+        }
+
+        @keyframes breathingLarge {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* 渐变动画 */
+        .gradient-animate {
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #FF6B6B 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 8s ease infinite;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 文字晃动效果 */
+        .text-shake {
+            animation: textShake 4s ease-in-out infinite;
+        }
+
+        @keyframes textShake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* 确保文字始终可见 */
+        .subtitle {
+            display: block;
+            opacity: 1;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* 点赞按钮样式 */
+        .like-button {
+            position: fixed;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            z-index: 1000;
+            background: white;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #ff4757;
+        }
+        
+        .like-button:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+        }
+        
+        .like-button.liked {
+            color: #ff4757;
+            background: #fff5f5;
+        }
+        
+        .like-button i {
+            font-size: 32px;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+
+        /* 点赞图标悬停动画 */
+        .like-button:hover i {
+            animation: heartBeat 1.3s ease-in-out infinite;
+            color: #ff4757;
+        }
+
+        @keyframes heartBeat {
+            0% {
+                transform: scale(1);
+            }
+            14% {
+                transform: scale(1.3);
+            }
+            28% {
+                transform: scale(1);
+            }
+            42% {
+                transform: scale(1.3);
+            }
+            70% {
+                transform: scale(1);
+            }
+        }
+
+        /* 点赞文字悬停效果 */
+        .like-button:hover .text-sm {
+            color: #ff4757;
+            transform: scale(1.1);
+        }
+
+        .like-button .text-sm {
+            transition: all 0.3s ease;
+        }
+        
+        .like-count {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff4757;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            border: 2px solid white;
+            transition: all 0.3s ease;
+        }
+
+        .like-button:hover .like-count {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+        }
+
+        /* 地图样式 */
+        #message-map {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .mapboxgl-popup-content {
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .mapboxgl-popup-close-button {
+            padding: 0.5rem;
+            font-size: 1.25rem;
+            color: #666;
+        }
+
+        .mapboxgl-popup-close-button:hover {
+            background-color: transparent;
+            color: #333;
+        }
+
+        .mapboxgl-marker {
+            transition: all 0.3s ease;
+        }
+
+        .mapboxgl-marker:hover {
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body class="min-h-screen">
+    <!-- 点赞按钮 -->
+    <div class="like-button" onclick="handleLike()">
+        <i class="fas fa-heart"></i>
+        <span class="text-sm">大拇哥</span>
+        <span class="like-count" id="likeCount">0</span>
+    </div>
+
     <!-- 导航栏 -->
     <nav class="fixed w-full bg-white/80 backdrop-blur-sm z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -66,8 +298,10 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                 <div data-aos="fade-right">
-                    <h1 class="text-4xl md:text-6xl font-bold mb-6 hero-title gradient-text">你好，我是李丁一祺</h1>
-                    <p class="text-xl md:text-2xl mb-8">一名热爱人工智能与交叉学科的研究生</p>
+                    <h1 class="text-4xl md:text-6xl font-bold mb-6 hero-title gradient-animate typewriter breathing-large text-shake">你好，我是李丁一祺</h1>
+                    <p class="text-xl md:text-2xl mb-8 subtitle fade-in">
+                        一名热爱 <span class="breathing">人工智能</span> 与 <span class="breathing">交叉学科 </span> 的研究生
+                    </p>
                     <div class="flex flex-col sm:flex-row gap-4 mt-8">
                         <a href="#contact" class="custom-button bg-blue-600 text-white px-8 py-3 rounded-full hover:bg-blue-700 transition-colors">
                             联系我
@@ -97,33 +331,94 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div class="card-hover bg-gray-50 p-8 rounded-xl custom-shadow" data-aos="fade-right">
                     <h3 class="text-xl font-semibold mb-4">个人简介</h3>
-                    <p class="text-gray-600">
-                        我是一名即将进入厦门大学人工智能研究院攻读硕士学位的准研究生。本科毕业于深圳大学地理空间信息工程专业，GPA 84.9/100（前15%）。
-                        在人工智能、地理信息科学和深度学习领域有扎实的理论基础和丰富的实践经验。擅长多源数据融合分析、深度学习模型开发与优化，
-                        以及地理信息系统的设计与实现。曾获得多项国家级竞赛奖项，并在国际会议上发表学术论文。
-                    </p>
+                    <div class="space-y-6">
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-2">自我介绍</h4>
+                                <ul class="list-disc list-inside text-gray-600 space-y-2">                                   
+                                    <li>你好，我是一名算法工程师，对 AI 与自然科学的交叉问题充满兴趣，也热衷于探索"为什么"。</li>
+                                    <li>研究方向：多模态大模型和 AI for Science</li>
+                                    <li>从地图与遥感出发，我一路走向深度学习和大模型研究。在这个过程中，我逐渐对复杂系统的建模产生了浓厚兴趣——尤其是那些看起来充满数据、但背后隐藏着更多人类行为与科学机理的问题。</li>                                
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-2">研究兴趣</h4>
+                                <ul class="list-disc list-inside text-gray-600 space-y-2">
+                                    <li>AI 与自然科学的交叉问题研究</li>
+                                    <li>热衷于探索"为什么"的科学本质</li>
+                                    <li>关注数据驱动与科学机制的结合</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-2">专业技能</h4>
+                                <ul class="list-disc list-inside text-gray-600 space-y-2">
+                                    <li>多源异构数据处理</li>
+                                    <li>深度学习模型的设计、训练与优化</li>
+                                    <li>多模态模型微调与跨模态适配</li>
+                                    <li>基于 RAG 的 LLM 开发经验</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-2">未来展望</h4>
+                                <ul class="list-disc list-inside text-gray-600 space-y-2">
+                                    <li>探索 AI 世界中的科学之美</li>
+                                    <li>期待与志同道合的伙伴共同进步</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-hover bg-gray-50 p-8 rounded-xl custom-shadow" data-aos="fade-left">
                     <h3 class="text-xl font-semibold mb-4">教育背景</h3>
                     <ul class="space-y-4">
                         <li class="flex items-center">
-                            <svg class="h-5 w-5 text-gray-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <div>
-                                <p class="font-medium">厦门大学 人工智能研究院</p>
-                                <p class="text-gray-600">人工智能（硕士）</p>
+                            <div class="flex items-center space-x-4">
+                                <img src="./images/Xiamen_University_logo.svg.png" alt="厦门大学校徽" class="w-12 h-12 object-contain bg-white rounded-full p-1">
+                                <div>
+                                    <p class="font-medium">厦门大学 人工智能研究院</p>
+                                    <p class="text-gray-600">人工智能（硕士）</p>
+                                </div>
                             </div>
                         </li>
                         <li class="flex items-center">
-                            <svg class="h-5 w-5 text-gray-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <div>
-                                <p class="font-medium">深圳大学 建筑与城市规划学院</p>
-                                <p class="text-gray-600">地理空间信息工程（本科）</p>
-                                <p class="text-gray-600">GPA: 85/100（Ranking 5）</p>
-                                <p class="text-gray-600">英语：CET-6，IELTS 7</p>
+                            <div class="flex items-center space-x-4">
+                                <img src="./images/Shenzhen_University_Logo.svg" alt="深圳大学校徽" class="w-12 h-12 object-contain bg-white rounded-full p-1">
+                                <div>
+                                    <p class="font-medium">深圳大学 城市信息工程系</p>
+                                    <p class="text-gray-600">地理空间信息工程（本科）</p>
+                                    <p class="text-gray-600">GPA: 85/100（Ranking 5）</p>
+                                    <p class="text-gray-600">英语：CET-6，IELTS 7</p>
+                                </div>
                             </div>
                         </li>
                     </ul>
@@ -464,45 +759,118 @@
     <section id="contact" class="py-20 bg-gray-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-3xl font-bold text-center mb-12 gradient-text" data-aos="fade-up">联系我</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div class="card-hover bg-white p-8 rounded-xl custom-shadow" data-aos="fade-right">
-                    <h3 class="text-xl font-semibold mb-6">联系方式</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center space-x-4">
-                            <a href="mailto:lidingyiqi@outlook.com" class="text-gray-600 hover:text-blue-500 transition-colors">
-                                <i class="fas fa-envelope text-xl"></i>
-                            </a>
-                            <a href="https://github.com/LeoLiding" target="_blank" class="text-gray-600 hover:text-blue-500 transition-colors">
-                                <i class="fab fa-github text-xl"></i>
-                            </a>
+            
+            <!-- 联系方式 -->
+            <div class="card-hover bg-white p-6 rounded-xl custom-shadow mb-8" data-aos="fade-up">
+                <div class="flex items-center justify-center space-x-8">
+                    <a href="mailto:leoliding@qq.com" class="text-gray-600 hover:text-blue-500 transition-colors flex items-center">
+                        <i class="fas fa-envelope text-xl"></i>
+                    </a>
+                    <a href="https://github.com/LeoLiding" target="_blank" class="text-gray-600 hover:text-blue-500 transition-colors flex items-center">
+                        <i class="fab fa-github text-xl"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 留言板和地图区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- 左侧：留言板 -->
+                <div class="space-y-8">
+                    <!-- 留言表单 -->
+                    <div class="card-hover bg-white p-8 rounded-xl custom-shadow" data-aos="fade-right">
+                        <h3 class="text-xl font-semibold mb-6">留言板</h3>
+                        <form class="space-y-4" id="message-form" onsubmit="return submitMessage(event)">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">署名</label>
+                                <input type="text" name="author" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-input" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">留言内容</label>
+                                <textarea name="content" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-input" required></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">来自</label>
+                                <select name="location" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-input" required>
+                                    <option value="">请选择位置</option>
+                                    <optgroup label="中国">
+                                        <option value="中国 北京">北京</option>
+                                        <option value="中国 上海">上海</option>
+                                        <option value="中国 广州">广州</option>
+                                        <option value="中国 深圳">深圳</option>
+                                        <option value="中国 杭州">杭州</option>
+                                        <option value="中国 成都">成都</option>
+                                        <option value="中国 武汉">武汉</option>
+                                        <option value="中国 西安">西安</option>
+                                        <option value="中国 南京">南京</option>
+                                        <option value="中国 厦门">厦门</option>
+                                        <option value="中国 重庆">重庆</option>
+                                        <option value="中国 天津">天津</option>
+                                        <option value="中国 苏州">苏州</option>
+                                        <option value="中国 长沙">长沙</option>
+                                        <option value="中国 青岛">青岛</option>
+                                        <option value="中国 大连">大连</option>
+                                        <option value="中国 福州">福州</option>
+                                        <option value="中国 济南">济南</option>
+                                        <option value="中国 郑州">郑州</option>
+                                        <option value="中国 昆明">昆明</option>
+                                    </optgroup>
+                                    <optgroup label="其他国家">
+                                        <option value="美国 纽约">美国 纽约</option>
+                                        <option value="美国 旧金山">美国 旧金山</option>
+                                        <option value="美国 洛杉矶">美国 洛杉矶</option>
+                                        <option value="美国 芝加哥">美国 芝加哥</option>
+                                        <option value="美国 波士顿">美国 波士顿</option>
+                                        <option value="英国 伦敦">英国 伦敦</option>
+                                        <option value="英国 曼彻斯特">英国 曼彻斯特</option>
+                                        <option value="英国 爱丁堡">英国 爱丁堡</option>
+                                        <option value="日本 东京">日本 东京</option>
+                                        <option value="日本 大阪">日本 大阪</option>
+                                        <option value="日本 京都">日本 京都</option>
+                                        <option value="新加坡 新加坡">新加坡</option>
+                                        <option value="加拿大 多伦多">加拿大 多伦多</option>
+                                        <option value="加拿大 温哥华">加拿大 温哥华</option>
+                                        <option value="澳大利亚 悉尼">澳大利亚 悉尼</option>
+                                        <option value="澳大利亚 墨尔本">澳大利亚 墨尔本</option>
+                                        <option value="德国 柏林">德国 柏林</option>
+                                        <option value="德国 慕尼黑">德国 慕尼黑</option>
+                                        <option value="法国 巴黎">法国 巴黎</option>
+                                        <option value="法国 里昂">法国 里昂</option>
+                                        <option value="韩国 首尔">韩国 首尔</option>
+                                        <option value="韩国 釜山">韩国 釜山</option>
+                                        <option value="意大利 罗马">意大利 罗马</option>
+                                        <option value="意大利 米兰">意大利 米兰</option>
+                                        <option value="西班牙 马德里">西班牙 马德里</option>
+                                        <option value="西班牙 巴塞罗那">西班牙 巴塞罗那</option>
+                                        <option value="荷兰 阿姆斯特丹">荷兰 阿姆斯特丹</option>
+                                        <option value="瑞士 苏黎世">瑞士 苏黎世</option>
+                                        <option value="俄罗斯 莫斯科">俄罗斯 莫斯科</option>
+                                        <option value="印度 孟买">印度 孟买</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors custom-button">
+                                发布留言
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- 留言列表 -->
+                    <div class="card-hover bg-white p-8 rounded-xl custom-shadow" data-aos="fade-right">
+                        <h4 class="text-lg font-medium mb-4">留言列表</h4>
+                        <div id="message-list" class="space-y-4">
+                            <!-- 留言将通过 JavaScript 动态添加 -->
                         </div>
-                        <!-- <div class="flex items-center">
-                            <svg class="h-6 w-6 text-gray-500 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                            <span>18965512357</span>
-                        </div> -->
                     </div>
                 </div>
+
+                <!-- 右侧：留言地图 -->
                 <div class="card-hover bg-white p-8 rounded-xl custom-shadow" data-aos="fade-left">
-                    <h3 class="text-xl font-semibold mb-6">发送消息</h3>
-                    <form class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
-                            <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-input">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
-                            <input type="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-input">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">消息</label>
-                            <textarea rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-input"></textarea>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors custom-button">
-                            发送消息
-                        </button>
-                    </form>
+                    <h3 class="text-xl font-semibold mb-6">留言地图</h3>
+                    <div id="message-map" class="h-[600px] rounded-lg overflow-hidden"></div>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <p>点击地图上的标记可以查看该位置的留言</p>
+                        <p>颜色越深表示该位置的留言越多</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -556,5 +924,161 @@
 
     <!-- 引入自定义JS -->
     <script src="js/main.js"></script>
+    <script>
+        // 清空留言
+        localStorage.removeItem('messages');
+        messages = [];
+        
+        // 从localStorage获取点赞数
+        let likeCount = parseInt(localStorage.getItem('likeCount')) || 0;
+        document.getElementById('likeCount').textContent = likeCount;
+        
+        // 处理点赞事件
+        function handleLike() {
+            const likeButton = document.querySelector('.like-button');
+            likeButton.classList.add('liked');
+            likeCount++;
+            localStorage.setItem('likeCount', likeCount);
+            document.getElementById('likeCount').textContent = likeCount;
+            
+            // 添加点赞动画效果
+            likeButton.style.transform = 'translateY(-50%) scale(1.2)';
+            setTimeout(() => {
+                likeButton.style.transform = 'translateY(-50%) scale(1)';
+            }, 200);
+        }
+    </script>
+    <script>
+        // 存储留言的数组
+        let messages = [];
+        let currentIP = ''; // 存储当前用户的IP
+        let map = null; // 存储地图实例
+        let markers = {}; // 存储地图标记
+        let locationCounts = {}; // 存储位置计数
+
+        // 从 URL 参数中获取留言数据
+        function getMessagesFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedMessages = urlParams.get('messages');
+            if (encodedMessages) {
+                try {
+                    return JSON.parse(decodeURIComponent(encodedMessages));
+                } catch (e) {
+                    console.error('解析留言数据失败:', e);
+                    return [];
+                }
+            }
+            return [];
+        }
+
+        // 将留言数据保存到 URL
+        function saveMessagesToUrl() {
+            const encodedMessages = encodeURIComponent(JSON.stringify(messages));
+            const newUrl = `${window.location.pathname}?messages=${encodedMessages}`;
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // 初始化留言数据
+        function initMessages() {
+            messages = getMessagesFromUrl();
+            if (messages.length === 0) {
+                // 如果没有 URL 参数，尝试从 localStorage 获取
+                const storedMessages = localStorage.getItem('messages');
+                if (storedMessages) {
+                    messages = JSON.parse(storedMessages);
+                    // 将 localStorage 的数据同步到 URL
+                    saveMessagesToUrl();
+                }
+            }
+        }
+
+        // 提交留言
+        async function submitMessage(e) {
+            e.preventDefault();
+            
+            const form = document.getElementById('message-form');
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = '发布中...';
+
+            try {
+                const ip = await getIP();
+                if (!ip) {
+                    throw new Error('无法获取IP地址');
+                }
+                
+                const newMessage = {
+                    author: form.author.value,
+                    content: form.content.value,
+                    time: new Date().toLocaleString('zh-CN'),
+                    ip: ip,
+                    location: form.location.value
+                };
+
+                messages.unshift(newMessage);
+                
+                // 保存到 URL 和 localStorage
+                saveMessagesToUrl();
+                localStorage.setItem('messages', JSON.stringify(messages));
+                
+                // 添加新留言到地图
+                await addMessageToMap(newMessage);
+                displayMessages();
+                form.reset();
+            } catch (error) {
+                console.error('提交留言失败:', error);
+                alert('发布失败，请稍后重试');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = '发布留言';
+            }
+            
+            return false;
+        }
+
+        // 删除留言
+        async function deleteMessage(time) {
+            if (confirm('确定要删除这条留言吗？')) {
+                const messageToDelete = messages.find(msg => msg.time === time);
+                if (messageToDelete) {
+                    const location = messageToDelete.location;
+                    locationCounts[location] = (locationCounts[location] || 1) - 1;
+                    
+                    if (locationCounts[location] === 0) {
+                        // 如果该位置没有留言了，移除标记
+                        if (markers[location]) {
+                            map.removeLayer(markers[location]);
+                            delete markers[location];
+                        }
+                    } else {
+                        // 更新标记样式
+                        await addMessageToMap(messageToDelete);
+                    }
+                }
+                
+                messages = messages.filter(msg => msg.time !== time);
+                
+                // 更新 URL 和 localStorage
+                saveMessagesToUrl();
+                localStorage.setItem('messages', JSON.stringify(messages));
+                displayMessages();
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                currentIP = await getIP();
+                if (!currentIP) {
+                    console.error('无法获取当前用户IP');
+                }
+                initMessages();
+                initMap();
+                displayMessages();
+            } catch (error) {
+                console.error('初始化失败:', error);
+            }
+        });
+    </script>
 </body>
 </html> 
