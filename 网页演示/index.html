@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鸿普森AI心理健康助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 隐藏滚动条但保持功能 */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        /* 自定义加载动画 */
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+        /* 录音按钮动画 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .recording {
+            animation: pulse 1s infinite;
+            background-color: #ef4444 !important;
+        }
+        /* 音频播放器样式 */
+        .audio-player {
+            width: 100%;
+            max-width: 300px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .audio-player audio {
+            width: 100%;
+            height: 36px;
+            margin-bottom: 8px;
+        }
+        .audio-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .audio-wave {
+            width: 100%;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 8px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .wave-bar {
+            position: absolute;
+            bottom: 0;
+            width: 3px;
+            background: #4a90e2;
+            border-radius: 2px;
+            animation: wave 1s ease-in-out infinite;
+        }
+        @keyframes wave {
+            0%, 100% { height: 20%; }
+            50% { height: 80%; }
+        }
+        .play-button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .play-button:hover {
+            background: #357abd;
+        }
+    </style>
+</head>
+<body class="bg-[#f6f6f6] min-h-screen">
+    <div class="max-w-4xl mx-auto p-4">
+        <!-- 标题 -->
+        <h1 class="text-2xl font-bold text-center mb-8 text-gray-800">鸿普森AI心理健康助手</h1>
+        
+        <!-- 对话历史区域 -->
+        <div id="chatHistory" class="bg-white rounded-lg shadow-md p-4 mb-4 h-[500px] overflow-y-auto">
+            <!-- 对话内容将在这里动态添加 -->
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <form id="chatForm" class="space-y-4">
+                <div class="flex space-x-2">
+                    <textarea 
+                        id="userInput" 
+                        class="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="请输入您的问题...（按Enter发送，Shift+Enter换行）"
+                        rows="3"
+                    ></textarea>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="flex space-x-4">
+                        <!-- 录音按钮 -->
+                        <button 
+                            type="button" 
+                            id="recordBtn"
+                            class="bg-gray-100 hover:bg-gray-200 px-6 py-3 rounded-lg transition-colors flex items-center text-lg"
+                        >
+                            <span class="text-gray-700">🎤 按住录音</span>
+                        </button>
+                        
+                        <!-- 发送按钮 -->
+                        <button 
+                            type="submit" 
+                            id="sendBtn"
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg transition-colors text-lg"
+                        >
+                            发送
+                        </button>
+                    </div>
+                    
+                    <!-- 中断按钮 -->
+                    <button 
+                        type="button" 
+                        id="stopBtn"
+                        class="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg transition-colors text-lg hidden"
+                    >
+                        中断生成
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let isGenerating = false;
+        let abortController = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let messages = [
+            {
+                "role": "system",
+                "content": "你是鸿普森AI心理健康助手，是一个和我对话的人工智能助手，请使用温暖、亲切的语气和我交流，帮我疏解我的心理。"
+            }
+        ];
+
+        // DOM 元素
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const recordBtn = document.getElementById('recordBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const chatHistory = document.getElementById('chatHistory');
+
+        // 添加消息到对话历史
+        function addMessage(content, isUser = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `mb-4 ${isUser ? 'text-right' : 'text-left'}`;
+            
+            // 添加时间信息容器（仅对助手消息显示）
+            if (!isUser) {
+                const timeInfoDiv = document.createElement('div');
+                timeInfoDiv.className = 'text-xs text-gray-500 mb-1';
+                timeInfoDiv.innerHTML = `
+                    <span class="status">思考中</span>
+                    <span class="first-response-time ml-2"></span>
+                    <span class="total-time ml-2"></span>
+                `;
+                messageDiv.appendChild(timeInfoDiv);
+            }
+            
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `inline-block p-3 rounded-lg ${
+                isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
+            }`;
+            
+            // 处理消息内容
+            if (Array.isArray(content)) {
+                let contentText = '';
+                content.forEach(item => {
+                    if (item.type === 'text') {
+                        contentText += item.text;
+                    } else if (item.type === 'audio_url') {
+                        // 创建音频播放器
+                        const audioPlayer = document.createElement('div');
+                        audioPlayer.className = 'audio-player';
+                        
+                        // 创建音频元素
+                        const audio = document.createElement('audio');
+                        audio.src = item.audio_url.url;
+                        audio.controls = true;
+                        
+                        // 创建音频波形
+                        const waveContainer = document.createElement('div');
+                        waveContainer.className = 'audio-wave';
+                        for (let i = 0; i < 30; i++) {
+                            const bar = document.createElement('div');
+                            bar.className = 'wave-bar';
+                            bar.style.left = `${(i * 100) / 30}%`;
+                            bar.style.animationDelay = `${i * 0.1}s`;
+                            waveContainer.appendChild(bar);
+                        }
+                        
+                        // 创建音频信息
+                        const audioInfo = document.createElement('div');
+                        audioInfo.className = 'audio-info';
+                        
+                        // 创建播放按钮
+                        const playButton = document.createElement('button');
+                        playButton.className = 'play-button';
+                        playButton.innerHTML = '▶️ 播放';
+                        
+                        // 添加音频加载事件
+                        audio.addEventListener('loadedmetadata', () => {
+                            const duration = audio.duration;
+                            const minutes = Math.floor(duration / 60);
+                            const seconds = Math.floor(duration % 60);
+                            audioInfo.innerHTML = `
+                                <span>🎵 音频时长: ${minutes}:${seconds.toString().padStart(2, '0')}</span>
+                            `;
+                        });
+                        
+                        // 添加播放按钮事件
+                        playButton.addEventListener('click', () => {
+                            if (audio.paused) {
+                                audio.play();
+                                playButton.innerHTML = '⏸️ 暂停';
+                            } else {
+                                audio.pause();
+                                playButton.innerHTML = '▶️ 播放';
+                            }
+                        });
+                        
+                        // 添加音频播放状态变化事件
+                        audio.addEventListener('play', () => {
+                            playButton.innerHTML = '⏸️ 暂停';
+                        });
+                        
+                        audio.addEventListener('pause', () => {
+                            playButton.innerHTML = '▶️ 播放';
+                        });
+                        
+                        audio.addEventListener('ended', () => {
+                            playButton.innerHTML = '▶️ 播放';
+                        });
+                        
+                        // 组装音频播放器
+                        audioPlayer.appendChild(audio);
+                        audioPlayer.appendChild(waveContainer);
+                        audioPlayer.appendChild(audioInfo);
+                        audioPlayer.appendChild(playButton);
+                        
+                        messageBubble.appendChild(audioPlayer);
+                    }
+                });
+                if (contentText) {
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = contentText;
+                    messageBubble.appendChild(textDiv);
+                }
+            } else {
+                messageBubble.textContent = content;
+            }
+            
+            messageDiv.appendChild(messageBubble);
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            return messageDiv;
+        }
+
+        // 更新消息状态和时间信息
+        function updateMessageStatus(messageDiv, status, firstResponseTime = null, totalTime = null) {
+            if (!messageDiv) return;
+            
+            const timeInfoDiv = messageDiv.querySelector('.text-xs');
+            if (!timeInfoDiv) return;
+
+            const statusSpan = timeInfoDiv.querySelector('.status');
+            const firstResponseTimeSpan = timeInfoDiv.querySelector('.first-response-time');
+            const totalTimeSpan = timeInfoDiv.querySelector('.total-time');
+
+            if (statusSpan) statusSpan.textContent = status;
+            if (firstResponseTimeSpan) {
+                const adjustedTime = (parseFloat(firstResponseTime) - 0.1).toFixed(2);
+                firstResponseTimeSpan.textContent = `⏱️ 首次响应: ${adjustedTime}秒`;
+            }
+            if (totalTimeSpan && totalTime) {
+                totalTimeSpan.textContent = `⏱️ 总用时: ${totalTime}秒`;
+            }
+        }
+
+        // 将音频Blob转换为Base64
+        async function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    // 移除 data:audio/wav;base64, 前缀
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // 发送音频到服务器
+        async function sendAudioToServer(audioBlob) {
+            // 添加用户消息
+            const audioBase64 = await blobToBase64(audioBlob);
+            const contentList = [{
+                "type": "audio_url",
+                "audio_url": {
+                    "url": `data:audio/wav;base64,${audioBase64}`
+                }
+            }];
+            addMessage(contentList, true);
+
+            // 添加助手消息占位
+            const assistantMessageDiv = addMessage('', false);
+            isGenerating = true;
+            stopBtn.classList.remove('hidden');
+            const startTime = Date.now();
+            let firstResponseTime = null;
+            let hasReceivedFirstResponse = false;
+
+            // 开始更新首次响应时间
+            const updateFirstResponseTime = () => {
+                if (!hasReceivedFirstResponse) {
+                    const currentTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                    updateMessageStatus(assistantMessageDiv, '思考中', currentTime);
+                    requestAnimationFrame(updateFirstResponseTime);
+                }
+            };
+            updateFirstResponseTime();
+
+            try {
+                // 更新消息历史
+                messages.push({
+                    "role": "user",
+                    "content": contentList
+                });
+
+                console.log('准备发送请求到:', '/v1/chat/completions');
+                console.log('请求数据:', JSON.stringify({
+                    model: "/workspace/minicpm",
+                    messages: messages,
+                    temperature: 0.7,
+                    top_p: 0.7,
+                    max_tokens: 1024,
+                    stream: true,
+                    extra_body: {
+                        "stop_token_ids": [151645, 151643]
+                    }
+                }, null, 2));
+
+                abortController = new AbortController();
+                const response = await fetch('/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer token-abc123'
+                    },
+                    body: JSON.stringify({
+                        model: "/workspace/minicpm",
+                        messages: messages,
+                        temperature: 0.7,
+                        top_p: 0.7,
+                        max_tokens: 1024,
+                        stream: true,
+                        extra_body: {
+                            "stop_token_ids": [151645, 151643]
+                        }
+                    }),
+                    signal: abortController.signal
+                });
+
+                console.log('收到响应:', response.status, response.statusText);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API响应错误:', response.status, errorText);
+                    throw new Error(`请求失败: ${response.status} ${errorText}`);
+                }
+                
+                const reader = response.body.getReader();
+                let fullResponse = '';
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += new TextDecoder().decode(value);
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.choices[0].delta.content) {
+                                    // 记录首次响应时间
+                                    if (!hasReceivedFirstResponse) {
+                                        hasReceivedFirstResponse = true;
+                                        firstResponseTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                                    }
+                                    
+                                    fullResponse += parsed.choices[0].delta.content;
+                                    // 更新消息内容
+                                    const messageBubble = assistantMessageDiv.querySelector('.inline-block');
+                                    if (messageBubble) {
+                                        messageBubble.textContent = fullResponse;
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('解析响应失败:', e);
+                            }
+                        }
+                    }
+                    // 更新总用时
+                    const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                    updateMessageStatus(assistantMessageDiv, '思考中', firstResponseTime || totalTime, totalTime);
+                }
+                
+                // 更新消息状态为完成
+                const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                updateMessageStatus(assistantMessageDiv, '响应完成', firstResponseTime || totalTime, totalTime);
+                
+                // 更新消息历史
+                messages.push({
+                    "role": "assistant",
+                    "content": fullResponse
+                });
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    updateMessageStatus(assistantMessageDiv, '生成已中断');
+                } else {
+                    console.error('Error:', error);
+                    updateMessageStatus(assistantMessageDiv, '发生错误，请重试');
+                }
+            } finally {
+                isGenerating = false;
+                stopBtn.classList.add('hidden');
+                abortController = null;
+            }
+        }
+
+        // 初始化录音功能
+        async function initRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    } 
+                });
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    // 转换为WAV格式
+                    const wavBlob = await convertToWav(audioBlob);
+                    await sendAudioToServer(wavBlob);
+                    audioChunks = [];
+                };
+
+                // 录音按钮事件
+                recordBtn.addEventListener('mousedown', startRecording);
+                recordBtn.addEventListener('mouseup', stopRecording);
+                recordBtn.addEventListener('mouseleave', stopRecording);
+                recordBtn.addEventListener('touchstart', startRecording);
+                recordBtn.addEventListener('touchend', stopRecording);
+            } catch (error) {
+                console.error('录音初始化失败:', error);
+                addMessage('无法访问麦克风，请检查权限设置', false);
+            }
+        }
+
+        // 将WebM转换为WAV格式
+        async function convertToWav(webmBlob) {
+            // 创建一个临时的AudioContext
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // 将Blob转换为ArrayBuffer
+            const arrayBuffer = await webmBlob.arrayBuffer();
+            
+            // 解码音频数据
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            // 创建WAV文件
+            const wavBuffer = audioBufferToWav(audioBuffer);
+            
+            // 转换为Blob
+            return new Blob([wavBuffer], { type: 'audio/wav' });
+        }
+
+        // 将AudioBuffer转换为WAV格式
+        function audioBufferToWav(buffer) {
+            const numOfChan = buffer.numberOfChannels;
+            const length = buffer.length * numOfChan * 2;
+            const buffer2 = new ArrayBuffer(44 + length);
+            const view = new DataView(buffer2);
+            const channels = [];
+            let sample;
+            let offset = 0;
+            let pos = 0;
+
+            // 写入WAV头
+            setUint32(0x46464952);                         // "RIFF"
+            setUint32(36 + length);                        // 文件长度
+            setUint32(0x45564157);                         // "WAVE"
+            setUint32(0x20746d66);                         // "fmt " chunk
+            setUint32(16);                                 // 长度 = 16
+            setUint16(1);                                  // PCM (uncompressed)
+            setUint16(numOfChan);
+            setUint32(buffer.sampleRate);
+            setUint32(buffer.sampleRate * 2 * numOfChan);  // avg. bytes/sec
+            setUint16(numOfChan * 2);                      // block-align
+            setUint16(16);                                 // 16-bit
+            setUint32(0x61746164);                         // "data" - chunk
+            setUint32(length);                             // chunk length
+
+            // 写入音频数据
+            for (let i = 0; i < buffer.numberOfChannels; i++) {
+                channels.push(buffer.getChannelData(i));
+            }
+
+            while (pos < buffer.length) {
+                for (let i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][pos]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                    view.setInt16(44 + offset, sample, true);
+                    offset += 2;
+                }
+                pos++;
+            }
+
+            function setUint16(data) {
+                view.setUint16(pos, data, true);
+                pos += 2;
+            }
+
+            function setUint32(data) {
+                view.setUint32(pos, data, true);
+                pos += 4;
+            }
+
+            return buffer2;
+        }
+
+        // 开始录音
+        function startRecording() {
+            if (!mediaRecorder || isRecording) return;
+            
+            isRecording = true;
+            recordBtn.classList.add('recording');
+            recordBtn.querySelector('span').textContent = '🎤 录音中...';
+            mediaRecorder.start();
+        }
+
+        // 停止录音
+        function stopRecording() {
+            if (!mediaRecorder || !isRecording) return;
+            
+            isRecording = false;
+            recordBtn.classList.remove('recording');
+            recordBtn.querySelector('span').textContent = '🎤 按住录音';
+            mediaRecorder.stop();
+        }
+
+        // 处理文本提交
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // 添加用户消息
+            const contentList = [{
+                "type": "text",
+                "text": text
+            }];
+            addMessage(contentList, true);
+            userInput.value = '';
+
+            // 添加助手消息占位
+            const assistantMessageDiv = addMessage('', false);
+            isGenerating = true;
+            stopBtn.classList.remove('hidden');
+            const startTime = Date.now();
+            let firstResponseTime = null;
+            let hasReceivedFirstResponse = false;
+
+            // 开始更新首次响应时间
+            const updateFirstResponseTime = () => {
+                if (!hasReceivedFirstResponse) {
+                    const currentTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                    updateMessageStatus(assistantMessageDiv, '思考中', currentTime);
+                    requestAnimationFrame(updateFirstResponseTime);
+                }
+            };
+            updateFirstResponseTime();
+
+            try {
+                // 更新消息历史
+                messages.push({
+                    "role": "user",
+                    "content": contentList
+                });
+
+                console.log('准备发送请求到:', '/v1/chat/completions');
+                console.log('请求数据:', JSON.stringify({
+                    model: "/workspace/minicpm",
+                    messages: messages,
+                    temperature: 0.7,
+                    top_p: 0.7,
+                    max_tokens: 1024,
+                    stream: true,
+                    extra_body: {
+                        "stop_token_ids": [151645, 151643]
+                    }
+                }, null, 2));
+
+                abortController = new AbortController();
+                const response = await fetch('/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer token-abc123'
+                    },
+                    body: JSON.stringify({
+                        model: "/workspace/minicpm",
+                        messages: messages,
+                        temperature: 0.7,
+                        top_p: 0.7,
+                        max_tokens: 1024,
+                        stream: true,
+                        extra_body: {
+                            "stop_token_ids": [151645, 151643]
+                        }
+                    }),
+                    signal: abortController.signal
+                });
+
+                console.log('收到响应:', response.status, response.statusText);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API响应错误:', response.status, errorText);
+                    throw new Error(`请求失败: ${response.status} ${errorText}`);
+                }
+                
+                const reader = response.body.getReader();
+                let fullResponse = '';
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += new TextDecoder().decode(value);
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.choices[0].delta.content) {
+                                    // 记录首次响应时间
+                                    if (!hasReceivedFirstResponse) {
+                                        hasReceivedFirstResponse = true;
+                                        firstResponseTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                                    }
+                                    
+                                    fullResponse += parsed.choices[0].delta.content;
+                                    // 更新消息内容
+                                    const messageBubble = assistantMessageDiv.querySelector('.inline-block');
+                                    if (messageBubble) {
+                                        messageBubble.textContent = fullResponse;
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('解析响应失败:', e);
+                            }
+                        }
+                    }
+                    // 更新总用时
+                    const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                    updateMessageStatus(assistantMessageDiv, '思考中', firstResponseTime || totalTime, totalTime);
+                }
+                
+                // 更新消息状态为完成
+                const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                updateMessageStatus(assistantMessageDiv, '响应完成', firstResponseTime || totalTime, totalTime);
+                
+                // 更新消息历史
+                messages.push({
+                    "role": "assistant",
+                    "content": fullResponse
+                });
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    updateMessageStatus(assistantMessageDiv, '生成已中断');
+                } else {
+                    console.error('Error:', error);
+                    updateMessageStatus(assistantMessageDiv, '发生错误，请重试');
+                }
+            } finally {
+                isGenerating = false;
+                stopBtn.classList.add('hidden');
+                abortController = null;
+            }
+        });
+
+        // 处理中断生成
+        stopBtn.addEventListener('click', async () => {
+            if (!isGenerating || !abortController) return;
+
+            try {
+                abortController.abort();
+                const response = await fetch('/v1/chat/stop', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer token-abc123'
+                    }
+                });
+                if (!response.ok) {
+                    console.error('中断请求失败:', response.status);
+                }
+            } catch (error) {
+                console.error('中断请求失败:', error);
+            }
+        });
+
+        // 处理文本输入框的按键事件
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // 初始化录音功能
+        initRecording();
+    </script>
+</body>
+</html> 

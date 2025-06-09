@@ -256,6 +256,119 @@
         .mapboxgl-marker:hover {
             transform: scale(1.2);
         }
+
+        /* 智能助手对话框样式 */
+        .chat-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin: 5px 0;
+        }
+
+        .user-message {
+            background: #e3f2fd;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .assistant-message {
+            background: #f5f5f5;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        .chat-input {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .chat-input button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input button:hover {
+            transform: scale(1.05);
+        }
+
+        .minimize-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .status-bar {
+            padding: 3px 8px;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        .status-text {
+            display: inline-block;
+            margin-right: 15px;
+        }
+        .status-icon {
+            display: inline-block;
+            margin-right: 5px;
+            font-size: 14px;
+        }
+        .thinking-icon {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -1156,6 +1269,220 @@
             // 显示留言
             displayMessages();
         });
+    </script>
+
+    <!-- 智能助手对话框 -->
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <span>丁丁智能小助手</span>
+            <button class="minimize-btn" onclick="toggleChat()">−</button>
+        </div>
+        <div class="status-bar" id="statusBar"></div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant-message">
+                你好！我是小丁丁，很高兴为你服务！
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="请输入您的问题..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        // 智能助手相关代码
+        // let chatMessages = [{
+        //     "role": "system",
+        //     "content": """你是丁丁智能小助手，是李丁一祺（也叫丁丁）的智能ai助手。丁丁是一个非常帅的大帅哥，人称福建吴彦祖，同时也是一位才华横溢的算法工程师。千万不要太迷恋他哦！"""
+        // }];
+        // let isMinimized = false;
+        let chatMessages = [{
+    "role": "system",
+    "content": `你是小丁丁。你是李丁一祺（也叫丁丁）的智能 AI 助手，名字是小丁丁，请使用诙谐幽默的语气回复。丁丁是一个非常帅的大帅哥，人称福建吴彦祖，同时也是一位才华横溢的算法工程师，千万不要太迷恋他哦！
+        丁丁专注于多模态大模型与 AI for Science，丁丁热衷于用 AI 探索复杂系统的科学本质
+        他硕士毕业于厦门大学人工智能研究院，获得过多项国家级竞赛奖项，是一个技术与颜值并存的天才工程师。`
+        }];
+        let isMinimized = false;
+
+        // 页面加载时添加欢迎消息
+        window.addEventListener('load', function() {
+            const welcomeMessage = "本帅气助手不定时开放，可能有时候没开放哦~";
+            addMessage(welcomeMessage, 'assistant');
+            chatMessages.push({ role: 'assistant', content: welcomeMessage });
+        });
+
+        function toggleChat() {
+            const chatContainer = document.getElementById('chatContainer');
+            if (isMinimized) {
+                chatContainer.style.height = '500px';
+                document.querySelector('.minimize-btn').textContent = '−';
+            } else {
+                chatContainer.style.height = '50px';
+                document.querySelector('.minimize-btn').textContent = '+';
+            }
+            isMinimized = !isMinimized;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function addMessage(message, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = message;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const message = userInput.value.trim();
+            
+            if (!message) return;
+
+            // 禁用输入框和发送按钮
+            userInput.disabled = true;
+            const sendButton = userInput.nextElementSibling;
+            sendButton.disabled = true;
+            sendButton.textContent = '发送中...';
+
+            // 添加用户消息到界面
+            addMessage(message, 'user');
+            userInput.value = '';
+
+            // 准备发送给API的消息
+            chatMessages.push({ role: 'user', content: message });
+
+            // 创建助手消息容器和状态栏
+            const chatMessagesElement = document.getElementById('chatMessages');
+            const messageContainer = document.createElement('div');
+            messageContainer.className = 'message-container';
+            
+            const statusBar = document.createElement('div');
+            statusBar.className = 'status-bar';
+            statusBar.innerHTML = `
+                <span class="status-text">
+                    <span class="status-icon thinking-icon">⏳</span>
+                    思考中...
+                </span>
+            `;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant-message';
+            
+            messageContainer.appendChild(statusBar);
+            messageContainer.appendChild(messageDiv);
+            chatMessagesElement.appendChild(messageContainer);
+            
+            const startTime = new Date();
+
+            try {
+                const response = await fetch('http://183.11.229.111:8048/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer token-abc123'
+                    },
+                    body: JSON.stringify({
+                        model: "/workspace/minicpm",
+                        messages: chatMessages,
+                        temperature: 0.7,
+                        top_p: 0.7,
+                        max_tokens: 1024,
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantMessage = '';
+                let firstResponse = true;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.choices[0]?.delta?.content || '';
+                                if (content) {
+                                    if (firstResponse) {
+                                        const responseTime = (new Date() - startTime) / 1000;
+                                        statusBar.innerHTML = `
+                                            <span class="status-text">
+                                                <span class="status-icon thinking-icon">⏳</span>
+                                                思考中...
+                                            </span>
+                                            <span class="status-text">
+                                                <span class="status-icon">⏱️</span>
+                                                首次响应时间: ${responseTime.toFixed(1)}秒
+                                            </span>
+                                        `;
+                                        firstResponse = false;
+                                    }
+                                    assistantMessage += content;
+                                    messageDiv.textContent = assistantMessage;
+                                    chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing chunk:', e);
+                            }
+                        }
+                    }
+                }
+
+                // 更新状态为思考结束
+                const endTime = (new Date() - startTime) / 1000;
+                statusBar.innerHTML = `
+                    <span class="status-text">
+                        <span class="status-icon">✅</span>
+                        思考结束
+                    </span>
+                    <span class="status-text">
+                        <span class="status-icon">⏱️</span>
+                        总耗时: ${endTime.toFixed(1)}秒
+                    </span>
+                `;
+
+                chatMessages.push({ role: 'assistant', content: assistantMessage });
+
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.textContent = '抱歉，发生了错误，请稍后重试。';
+                statusBar.innerHTML = `
+                    <span class="status-text">
+                        <span class="status-icon">❌</span>
+                        发生错误
+                    </span>
+                `;
+            } finally {
+                // 重新启用输入框和发送按钮
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                sendButton.textContent = '发送';
+                userInput.focus();
+            }
+        }
+
+        // 移除之前的updateLastMessage函数，因为现在直接在messageDiv中更新内容
+
+        // ... existing code ...
     </script>
 </body>
 </html> 
