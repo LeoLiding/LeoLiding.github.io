@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 添加打字机效果
     const heroTitle = document.querySelector('.hero-title');
     if (heroTitle) {
-        typeWriter(heroTitle, '你好，我是李丁一祺');
+        heroTitle.style.width = 'auto'; // 让宽度自适应
+        typeWriter(heroTitle, 'Hi，我是Leo-Liding');
     }
 }); 
